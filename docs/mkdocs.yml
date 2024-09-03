@@ -1,0 +1,7 @@
+site_name: Workplete AI Employee Documentation
+nav:
+  - Home: index.md
+  - Data Processing: data_processing.md
+  - Analysis Engine: analysis_engine.md
+  - Report Generation: report_generation.md
+
