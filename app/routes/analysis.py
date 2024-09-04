@@ -1,10 +1,12 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Query
 from app.utils.file_handler import read_file
 from app.services.data_processing import clean_data, preprocess_data
 from app.services.analysis_engine import AnalysisEngine
 import io
 from pydantic import BaseModel
 import pandas as pd
+from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import LabelEncoder
 
 router = APIRouter()
 
@@ -33,7 +35,8 @@ class LinearRegressionRequest(BaseModel):
     target_column: str
 
 class KMeansRequest(BaseModel):
-    num_clusters: int
+    n_clusters: int
+    feature_columns: str
 
 @router.post("/descriptive_statistics/")
 async def get_descriptive_statistics(file: UploadFile = File(...)):
@@ -46,27 +49,53 @@ async def get_descriptive_statistics(file: UploadFile = File(...)):
     return {"descriptive_statistics": result}
 
 @router.post("/linear_regression/")
-async def perform_linear_regression(file: UploadFile = File(...), request: LinearRegressionRequest = Depends()):
-    contents = await file.read()
-    file_like_object = io.BytesIO(contents)
-    df = read_file(file_like_object, file.filename)
-    
-    if request.target_column not in df.columns:
-        raise HTTPException(status_code=400, detail="Invalid target column")
+async def linear_regression(
+    file: UploadFile = File(...),
+    x_column: str = Query(..., alias="x"),
+    y_column: str = Query(..., alias="y")
+):
+    # Read the CSV file
+    df = pd.read_csv(file.file)
 
-    analysis_engine = AnalysisEngine(df)
-    result = analysis_engine.linear_regression(request.target_column)
-    return {"linear_regression": result}
+    if x_column not in df.columns or y_column not in df.columns:
+        raise HTTPException(status_code=400, detail="Invalid column names.")
+
+    # Encode categorical data if necessary
+    if df[x_column].dtype == 'object':
+        le = LabelEncoder()
+        df[x_column] = le.fit_transform(df[x_column])
+    
+    if df[y_column].dtype == 'object':
+        le = LabelEncoder()
+        df[y_column] = le.fit_transform(df[y_column])
+
+    # Extracting the x and y values
+    X = df[[x_column]].values
+    y = df[y_column].values
+
+    # Perform linear regression
+    model = LinearRegression()
+    model.fit(X, y)
+    
+    # Return the slope and intercept
+    return {"slope": model.coef_[0], "intercept": model.intercept_}
 
 @router.post("/k_means_clustering/")
-async def perform_k_means_clustering(file: UploadFile = File(...), request: KMeansRequest = Depends()):
+async def perform_k_means_clustering(
+    file: UploadFile = File(...),
+    n_clusters: int = Query(..., alias="n_clusters"),
+    feature_columns: str = Query(..., alias="feature_columns")
+):
     contents = await file.read()
     file_like_object = io.BytesIO(contents)
     df = read_file(file_like_object, file.filename)
-    
-    if request.num_clusters < 1:
+
+    if n_clusters < 1:
         raise HTTPException(status_code=400, detail="Number of clusters must be at least 1")
 
+    feature_columns = feature_columns.split(",")
+    
+    # Assuming AnalysisEngine is set up to handle k-means clustering
     analysis_engine = AnalysisEngine(df)
-    result = analysis_engine.k_means_clustering(request.num_clusters)
+    result = analysis_engine.k_means_clustering(n_clusters, feature_columns)
     return {"k_means_clustering": result}
