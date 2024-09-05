@@ -5,8 +5,9 @@ from app.services.analysis_engine import AnalysisEngine
 import io
 from pydantic import BaseModel
 import pandas as pd
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.preprocessing import LabelEncoder
+
 
 router = APIRouter()
 
@@ -34,9 +35,10 @@ async def process_file(file: UploadFile = File(...)):
 class LinearRegressionRequest(BaseModel):
     target_column: str
 
-class KMeansRequest(BaseModel):
-    n_clusters: int
+class DecisionTreeRequest(BaseModel):
+    target_column: str
     feature_columns: str
+    max_depth: int = None
 
 @router.post("/descriptive_statistics/")
 async def get_descriptive_statistics(file: UploadFile = File(...)):
@@ -80,22 +82,42 @@ async def linear_regression(
     # Return the slope and intercept
     return {"slope": model.coef_[0], "intercept": model.intercept_}
 
-@router.post("/k_means_clustering/")
-async def perform_k_means_clustering(
+@router.post("/logistic_regression/")
+async def logistic_regression(
     file: UploadFile = File(...),
-    n_clusters: int = Query(..., alias="n_clusters"),
-    feature_columns: str = Query(..., alias="feature_columns")
+    x_column: str = Query(...),
+    y_column: str = Query(...)
 ):
     contents = await file.read()
     file_like_object = io.BytesIO(contents)
-    df = read_file(file_like_object, file.filename)
+    df = pd.read_csv(file_like_object)
 
-    if n_clusters < 1:
-        raise HTTPException(status_code=400, detail="Number of clusters must be at least 1")
+    if x_column not in df.columns or y_column not in df.columns:
+        raise HTTPException(status_code=400, detail="Invalid column names.")
 
-    feature_columns = feature_columns.split(",")
+    X = df[[x_column]]
+    y = df[y_column]
+
+    # Encode categorical data if necessary
+    if y.dtype == 'object':
+        le = LabelEncoder()
+        y = le.fit_transform(y)
     
-    # Assuming AnalysisEngine is set up to handle k-means clustering
-    analysis_engine = AnalysisEngine(df)
-    result = analysis_engine.k_means_clustering(n_clusters, feature_columns)
-    return {"k_means_clustering": result}
+    # Ensure y has two classes for logistic regression
+    if len(y.unique()) != 2:
+        raise HTTPException(status_code=400, detail="Logistic regression requires binary classification.")
+
+    # Fit logistic regression model
+    model = LogisticRegression()
+    model.fit(X, y)
+    
+    # Predict the probabilities
+    probabilities = model.predict_proba(X)
+    
+    return {
+        "coefficients": model.coef_.tolist(),
+        "intercept": model.intercept_.tolist(),
+        "predictions": model.predict(X).tolist(),
+        "probabilities": probabilities.tolist(),
+        "accuracy": model.score(X, y)
+    }
