@@ -1,7 +1,8 @@
 import numpy as np
 import pandas as pd
-from sklearn.linear_model import LinearRegression ,LogisticRegression
+from sklearn.linear_model import LinearRegression 
 from fastapi import HTTPException
+from sklearn.tree import  DecisionTreeRegressor
 
 class AnalysisEngine:
     def __init__(self, data):
@@ -49,33 +50,28 @@ class AnalysisEngine:
         }
         return regression_results
 
-    def logistic_regression(self, target_column, feature_columns):
+    def decision_tree_regression(self, target_column, feature_columns):
         """
-        Perform logistic regression on the data.
+        Perform Decision Tree Regression on the data.
         :param target_column: The column to be predicted (dependent variable).
         :param feature_columns: List of feature columns to be used for prediction.
-        :return: Dictionary with coefficients, intercept, accuracy, and predicted probabilities.
+        :return: Dictionary with feature importance, predictions, and R-squared value.
         """
         X = self.data[feature_columns]
         y = self.data[target_column]
 
-        # Handle non-numeric data if present
+        # Handle non-numeric data by converting categorical features to dummy variables
         if X.select_dtypes(include='object').any().any():
             X = pd.get_dummies(X)
-        
-        # Encode target if it's categorical
-        if y.dtype == 'object':
-            y = pd.factorize(y)[0]
 
-        model = LogisticRegression(max_iter=1000)
+        # Fit Decision Tree Regressor
+        model = DecisionTreeRegressor()
         model.fit(X, y)
 
-        logistic_regression_results = {
-            "coefficients": dict(zip(feature_columns, model.coef_[0])),
-            "intercept": model.intercept_[0],
-            "accuracy": model.score(X, y),
-            "predicted_probabilities": model.predict_proba(X).tolist(),
+        decision_tree_results = {
+            "feature_importance": dict(zip(X.columns, model.feature_importances_)),
             "predictions": model.predict(X).tolist(),
+            "r_squared": model.score(X, y)
         }
 
-        return logistic_regression_results
+        return decision_tree_results

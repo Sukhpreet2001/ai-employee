@@ -1,7 +1,9 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Query
+from fastapi.responses import FileResponse
 from app.utils.file_handler import read_file
 from app.services.data_processing import clean_data, preprocess_data
 from app.services.analysis_engine import AnalysisEngine
+from app.services.report_generator import ReportGenerator
 import io
 from pydantic import BaseModel
 import pandas as pd
@@ -82,42 +84,38 @@ async def linear_regression(
     # Return the slope and intercept
     return {"slope": model.coef_[0], "intercept": model.intercept_}
 
-@router.post("/logistic_regression/")
-async def logistic_regression(
+@router.post("/decision_tree_regression/")
+async def decision_tree_regression(
     file: UploadFile = File(...),
-    x_column: str = Query(...),
-    y_column: str = Query(...)
+    target_column: str = Query(...),
+    feature_columns: str = Query(...)
 ):
     contents = await file.read()
     file_like_object = io.BytesIO(contents)
     df = pd.read_csv(file_like_object)
 
-    if x_column not in df.columns or y_column not in df.columns:
+    feature_columns = feature_columns.split(",")
+
+    if target_column not in df.columns or any(col not in df.columns for col in feature_columns):
         raise HTTPException(status_code=400, detail="Invalid column names.")
 
-    X = df[[x_column]]
-    y = df[y_column]
+    analysis_engine = AnalysisEngine(df)
+    result = analysis_engine.decision_tree_regression(target_column, feature_columns)
+    
+    return result
+@router.post("/generate_report/")
+async def generate_report(file: UploadFile = File(...)):
+    # Load the uploaded file into a pandas DataFrame
+    df = pd.read_csv(file.file)
 
-    # Encode categorical data if necessary
-    if y.dtype == 'object':
-        le = LabelEncoder()
-        y = le.fit_transform(y)
-    
-    # Ensure y has two classes for logistic regression
-    if len(y.unique()) != 2:
-        raise HTTPException(status_code=400, detail="Logistic regression requires binary classification.")
+    # Create a report generator
+    report_generator = ReportGenerator(df)
 
-    # Fit logistic regression model
-    model = LogisticRegression()
-    model.fit(X, y)
-    
-    # Predict the probabilities
-    probabilities = model.predict_proba(X)
-    
-    return {
-        "coefficients": model.coef_.tolist(),
-        "intercept": model.intercept_.tolist(),
-        "predictions": model.predict(X).tolist(),
-        "probabilities": probabilities.tolist(),
-        "accuracy": model.score(X, y)
-    }
+    # Path where the PDF will be saved
+    output_pdf_path = "generated_report.pdf"
+
+    # Generate the report
+    report_generator.create_report(output_pdf_path)
+
+    # Return the PDF file
+    return FileResponse(output_pdf_path, media_type='application/pdf', filename="report.pdf")
