@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Employee UI</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+    <h1>AI Employee Interface</h1>
+
+    <!-- Data Upload Form -->
+    <h2>Upload Data</h2>
+    <form id="uploadForm">
+        <label for="fileInput">Select File:</label>
+        <input type="file" id="fileInput" name="file">
+        <button type="button" onclick="uploadFile()">Upload</button>
+    </form>
+
+    <!-- Data Analysis Form -->
+    <h2>Analyze Data</h2>
+    <form id="analysisForm">
+        <select id="analysisType" title="Analysis Type"></select>
+            <option value="descriptive">Descriptive Statistics</option>
+            <option value="linear_regression">Linear Regression</option>
+            <option value="decision_tree">Decision Tree Regression</option>
+        </select>
+        <button type="button" onclick="analyzeData()">Analyze</button>
+    </form>
+
+    <!-- Report Generation Form -->
+    <h2>Generate Report</h2>
+    <form id="reportForm">
+        <button type="button" onclick="generateReport()">Generate Report</button>
+    </form>
+
+    <script>
+        function uploadFile() {
+            const formData = new FormData();
+            formData.append('file', document.getElementById('fileInput').files[0]);
+
+            axios.post('http://localhost:8000/upload', formData)
+                .then(response => {
+                    alert('File uploaded successfully!');
+                })
+                .catch(error => {
+                    alert('Error uploading file.');
+                    console.error(error);
+                });
+        }
+
+        function analyzeData() {
+            const analysisType = document.getElementById('analysisType').value;
+
+            axios.post('http://localhost:8000/analyze', {
+                type: analysisType
+            })
+            .then(response => {
+                alert('Data analysis completed!');
+            })
+            .catch(error => {
+                alert('Error analyzing data.');
+                console.error(error);
+            });
+        }
+
+        function generateReport() {
+            axios.post('http://localhost:8000/generate_report')
+                .then(response => {
+                    alert('Report generated successfully!');
+                })
+                .catch(error => {
+                    alert('Error generating report.');
+                    console.error(error);
+                });
+        }
+    </script>
+</body>
+</html>
