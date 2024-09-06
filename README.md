@@ -65,8 +65,9 @@ Web Interface: Open your web browser and navigate to http://localhost:8000 to ac
 CLI Interface: You can interact with the CLI within the running Docker container. Use the following command to open a shell in the CLI container:
 ```bash
 docker-compose exec cli bash
+``` 
 From the shell, you can run CLI commands such as:
-```
+
 ```bash
 python app/cli/cli.py query
 ```
