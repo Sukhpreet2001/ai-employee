@@ -33,23 +33,36 @@ def upload_file(file_path: str):
         console.print(f"[bold red]Error reading file:[/bold red] {e}")
         return None
 
-def run_analysis(df):
-    # Example to run descriptive statistics
+def run_analysis(df, analysis_type):
     analysis_engine = AnalysisEngine(df)
-    result = analysis_engine.descriptive_statistics()
-    console.print("Descriptive Statistics:", style="bold blue")
-    console.print(result)
-
-def generate_report(df, output_file: str):
-    report_generator = ReportGenerator(df)
-    report_generator.create_report(output_file)
-    console.print(f"Report generated: {output_file}", style="bold green")
+    
+    if analysis_type == "descriptive":
+        result = analysis_engine.descriptive_statistics()
+        console.print("Descriptive Statistics:", style="bold blue")
+        console.print(result)
+    
+    elif analysis_type == "linear_regression":
+        x_column = input("Enter the name of the x column: ")
+        y_column = input("Enter the name of the y column: ")
+        result = analysis_engine.linear_regression(x_column, y_column)
+        console.print("Linear Regression Results:", style="bold blue")
+        console.print(result)
+    
+    elif analysis_type == "decision_tree":
+        target_column = input("Enter the target column name: ")
+        feature_columns = input("Enter the feature columns separated by commas: ").split(",")
+        result = analysis_engine.decision_tree_regression(target_column, feature_columns)
+        console.print("Decision Tree Regression Results:", style="bold blue")
+        console.print(result)
+    
+    else:
+        console.print(f"[bold red]Error:[/bold red] Unknown analysis type {analysis_type}")
 
 def main():
     parser = argparse.ArgumentParser(description="AI Employee CLI for data analysis and reporting.")
-    parser.add_argument("command", choices=["upload", "analyze", "report"], help="The action to perform.")
+    parser.add_argument("command", choices=["upload", "analyze"], help="The action to perform.")
     parser.add_argument("file", help="Path to the file for upload or analysis.")
-    parser.add_argument("--output", help="Path for saving the report.")
+    parser.add_argument("--type", choices=["descriptive", "linear_regression", "decision_tree"], help="Type of analysis to perform.")
 
     args = parser.parse_args()
 
@@ -58,15 +71,12 @@ def main():
         if df is not None:
             console.print("Data uploaded successfully.")
     elif args.command == "analyze":
-        df = upload_file(args.file)
-        if df is not None:
-            run_analysis(df)
-    elif args.command == "report":
-        df = upload_file(args.file)
-        if df is not None and args.output:
-            generate_report(df, args.output)
+        if args.type:
+            df = upload_file(args.file)
+            if df is not None:
+                run_analysis(df, args.type)
         else:
-            console.print("Please specify an output file for the report.", style="bold red")
+            console.print("[bold red]Error:[/bold red] Analysis type must be specified with --type.")
 
 if __name__ == "__main__":
     main()
