@@ -3,65 +3,144 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Employee UI</title>
+    <title>AI Employee Interface</title>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+        }
+        .module-section {
+            margin: 20px 0;
+            border: 1px solid #ccc;
+            padding: 20px;
+            border-radius: 5px;
+        }
+        .module-section h2 {
+            margin-top: 0;
+        }
+        .module-section button {
+            padding: 10px;
+            margin-top: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .module-section button:hover {
+            background-color: #0056b3;
+        }
+        #cliInstructions {
+            margin-top: 10px;
+            display: none;
+        }
+        #cliInstructions ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        #cliInstructions ul li {
+            background-color: #f0f0f0;
+            margin: 5px 0;
+            padding: 8px;
+            border-radius: 5px;
+        }
+    </style>
 </head>
 <body>
     <h1>AI Employee Interface</h1>
 
-    <!-- Data Upload Form -->
-    <h2>Upload Data</h2>
-    <form id="uploadForm">
-        <label for="fileInput">Select File:</label>
-        <input type="file" id="fileInput" name="file">
-        <button type="button" onclick="uploadFile()">Upload</button>
-    </form>
+    <!-- Data Processing Section -->
+    <div class="module-section">
+        <h2>Data Processing</h2>
+        <p>Select a CSV or XLS file to clean and preprocess the data.</p>
+        <form id="processingForm">
+            <input type="file" id="processFileInput" accept=".csv,.xls,.xlsx">
+            <button type="button" onclick="processData()">Process Data</button>
+        </form>
+    </div>
 
-    <!-- Data Analysis Form -->
-    <h2>Analyze Data</h2>
-    <form id="analysisForm">
-        <select id="analysisType" title="Analysis Type"></select>
-            <option value="descriptive">Descriptive Statistics</option>
-            <option value="linear_regression">Linear Regression</option>
-            <option value="decision_tree">Decision Tree Regression</option>
-        </select>
-        <button type="button" onclick="analyzeData()">Analyze</button>
-    </form>
+    <!-- Data Analysis Section -->
+    <div class="module-section">
+        <h2>Data Analysis</h2>
+        <p>Choose the type of analysis and upload a CSV or XLS file.</p>
+        <form id="analysisForm">
+            <select id="analysisType">
+                <option value="descriptive">Descriptive Statistics</option>
+                <option value="linear_regression">Linear Regression</option>
+                <option value="decision_tree">Decision Tree Regression</option>
+            </select>
+            <input type="file" id="analysisFileInput" accept=".csv,.xls,.xlsx">
+            <button type="button" onclick="analyzeData()">Analyze Data</button>
+        </form>
+    </div>
 
-    <!-- Report Generation Form -->
-    <h2>Generate Report</h2>
-    <form id="reportForm">
+    <!-- Report Generation Section -->
+    <div class="module-section">
+        <h2>Generate Report</h2>
+        <p>Generate a detailed report based on analysis, including visualizations and summaries.</p>
         <button type="button" onclick="generateReport()">Generate Report</button>
-    </form>
+    </div>
+
+    <!-- CLI Section -->
+    <div class="module-section">
+        <h2>Use Command Line Interface (CLI)</h2>
+        <p>If you're comfortable using the CLI, you can perform tasks directly through the terminal interface.</p>
+        <button type="button" onclick="toggleCliInstructions()">CLI Instructions</button>
+        <div id="cliInstructions">
+            <h3>CLI Commands:</h3>
+            <ul>
+                <li><code>upload</code>: Upload files</li>
+                <li><code>analyze --type [descriptive|linear|tree]</code>: Perform analysis</li>
+                <li><code>report</code>: Generate report</li>
+            </ul>
+        </div>
+    </div>
 
     <script>
-        function uploadFile() {
-            const formData = new FormData();
-            formData.append('file', document.getElementById('fileInput').files[0]);
+        // Check if a file is selected before processing
+        function processData() {
+            const fileInput = document.getElementById('processFileInput').files[0];
+            if (!fileInput) {
+                alert('Please select a file to process.');
+                return;
+            }
 
-            axios.post('http://localhost:8000/upload', formData)
+            const formData = new FormData();
+            formData.append('file', fileInput);
+
+            axios.post('http://localhost:8000/data_processing', formData)
                 .then(response => {
-                    alert('File uploaded successfully!');
+                    alert('Data processing completed!');
                 })
                 .catch(error => {
-                    alert('Error uploading file.');
+                    alert('Error processing data.');
                     console.error(error);
                 });
         }
 
         function analyzeData() {
+            const fileInput = document.getElementById('analysisFileInput').files[0];
             const analysisType = document.getElementById('analysisType').value;
 
-            axios.post('http://localhost:8000/analyze', {
-                type: analysisType
-            })
-            .then(response => {
-                alert('Data analysis completed!');
-            })
-            .catch(error => {
-                alert('Error analyzing data.');
-                console.error(error);
-            });
+            if (!fileInput) {
+                alert('Please select a file to analyze.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', fileInput);
+
+            axios.post(`http://localhost:8000/analysis?type=${analysisType}`, formData)
+                .then(response => {
+                    alert('Data analysis completed!');
+                })
+                .catch(error => {
+                    alert('Error analyzing data.');
+                    console.error(error);
+                });
         }
 
         function generateReport() {
@@ -74,6 +153,13 @@
                     console.error(error);
                 });
         }
+
+        // Toggle CLI Instructions
+        function toggleCliInstructions() {
+            const cliInstructions = document.getElementById('cliInstructions');
+            cliInstructions.style.display = cliInstructions.style.display === 'none' ? 'block' : 'none';
+        }
     </script>
 </body>
 </html>
+
