@@ -23,7 +23,8 @@ def interpret_query(tokens):
         return "unknown"
 
 # Example Usage
-query = "Can you please generate a report?"
-tokens = process_user_query(query)
-action = interpret_query(tokens)
-print(f"User action: {action}")
+if __name__ == "__main__":
+    query = input("Enter your query: ")
+    tokens = process_user_query(query)
+    action = interpret_query(tokens)
+    print(f"User action: {action}")

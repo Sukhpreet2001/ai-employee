@@ -1,5 +1,3 @@
-# tests/test_data_processing.py
-
 import pandas as pd
 from app.services.data_processing import clean_data, preprocess_data
 
@@ -9,6 +7,7 @@ def test_clean_data():
     df_cleaned = clean_data(df)
     
     assert df_cleaned.shape == (2, 2)
+    assert df_cleaned.isnull().sum().sum() == 0  # Check for no missing values
 
 def test_preprocess_data():
     data = {'col1': [1, 2, 3], 'col2': ['A', 'B', 'A']}
@@ -17,4 +16,4 @@ def test_preprocess_data():
     
     assert 'col2_A' in df_preprocessed.columns
     assert 'col2_B' in df_preprocessed.columns
-
+    assert df_preprocessed.isnull().sum().sum() == 0  # Ensure no missing values

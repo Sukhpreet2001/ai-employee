@@ -5,14 +5,13 @@ from app.services.analysis_engine import AnalysisEngine
 from app.services.data_processing import clean_data, preprocess_data
 from app.services.report_generator import ReportGenerator
 from app.utils.file_handler import read_file
+from app.nlp.nlp_utils import process_user_query, interpret_query
 import os
-import io
 import pandas as pd
 
 console = Console()
 
 def upload_file(file_path: str):
-    # Ensure the file path is valid
     if not os.path.exists(file_path):
         console.print(f"[bold red]Error:[/bold red] File {file_path} does not exist.")
         return None
@@ -22,10 +21,8 @@ def upload_file(file_path: str):
         console.print("[bold red]Error:[/bold red] File name not provided or cannot be determined.")
         return None
 
-    # Log file upload
     console.print(f"Uploading file: {file_path}")
 
-    # Read the file into a dataframe
     try:
         df = pd.read_csv(file_path)
         return df
@@ -58,9 +55,35 @@ def run_analysis(df, analysis_type):
     else:
         console.print(f"[bold red]Error:[/bold red] Unknown analysis type {analysis_type}")
 
+def process_query(query):
+    tokens = process_user_query(query)
+    action = interpret_query(tokens)
+    
+    if action == "upload_file":
+        file_path = input("Enter the file path to upload: ")
+        df = upload_file(file_path)
+        if df is not None:
+            console.print("Data uploaded successfully.")
+    elif action == "analysis":
+        file_path = input("Enter the file path for analysis: ")
+        df = upload_file(file_path)
+        if df is not None:
+            analysis_type = input("Enter the type of analysis (descriptive, linear_regression, decision_tree): ")
+            run_analysis(df, analysis_type)
+    elif action == "generate_report":
+        file_path = input("Enter the file path for report generation: ")
+        df = upload_file(file_path)
+        if df is not None:
+            report_path = input("Enter the path to save the report: ")
+            report_generator = ReportGenerator(df)
+            report_generator.create_report(report_path)
+            console.print(f"Report generated and saved at {report_path}")
+    else:
+        console.print("[bold red]Error:[/bold red] Unknown query action.")
+
 def main():
     parser = argparse.ArgumentParser(description="AI Employee CLI for data analysis and reporting.")
-    parser.add_argument("command", choices=["upload", "analyze"], help="The action to perform.")
+    parser.add_argument("command", choices=["upload", "analyze", "report"], help="The action to perform.")
     parser.add_argument("file", help="Path to the file for upload or analysis.")
     parser.add_argument("--type", choices=["descriptive", "linear_regression", "decision_tree"], help="Type of analysis to perform.")
 
@@ -77,6 +100,13 @@ def main():
                 run_analysis(df, args.type)
         else:
             console.print("[bold red]Error:[/bold red] Analysis type must be specified with --type.")
+    elif args.command == "report":
+        df = upload_file(args.file)
+        if df is not None:
+            report_path = input("Enter the path to save the report: ")
+            report_generator = ReportGenerator(df)
+            report_generator.create_report(report_path)
+            console.print(f"Report generated and saved at {report_path}")
 
 if __name__ == "__main__":
     main()

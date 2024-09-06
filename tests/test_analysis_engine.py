@@ -27,14 +27,18 @@ class TestAnalysisEngine(unittest.TestCase):
         self.assertIn('intercept', result)
         self.assertIn('r_squared', result)
 
-    def test_logistic_regression(self):
-        # Update to use valid feature columns for logistic regression
-        result = self.analysis_engine.logistic_regression(target_column='target', feature_columns=['feature1', 'feature2'])
-        self.assertIn('coefficients', result)
-        self.assertIn('intercept', result)
-        self.assertIn('accuracy', result)
-        self.assertIn('predicted_probabilities', result)
+    def test_decision_tree_regression(self):
+        result = self.analysis_engine.decision_tree_regression(target_column='target', feature_columns=['feature1', 'feature2'])
+        self.assertIn('feature_importance', result)
         self.assertIn('predictions', result)
+        self.assertIn('r_squared', result)
+
+    def test_invalid_data(self):
+        empty_df = pd.DataFrame()
+        analysis_engine = AnalysisEngine(empty_df)
+        with self.assertRaises(ValueError):
+            analysis_engine.descriptive_statistics()
 
 if __name__ == '__main__':
     unittest.main()
+
