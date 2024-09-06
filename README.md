@@ -20,7 +20,6 @@ The project directory includes the following components:
   - `nlp/`: NLP utilities for processing user queries.
   - `routes/`: FastAPI routes for handling API requests.
 - `tests/`: Unit tests for validating the functionality of various modules.
-- `docs/`: Documentation files.
 - `Dockerfile`: Defines the Docker image for the application.
 - `docker-compose.yml`: Defines the services, networks, and volumes for the Docker environment.
 - `requirements.txt`: Lists the Python dependencies for the project.
@@ -36,6 +35,7 @@ Clone the project repository to your local machine:
 ```bash
 git clone https://github.com/Sukhpreet2001/ai-employee.git
 cd ai-employee
+```bash
 # AI Employee Project
 
 ## Getting Started with Docker
