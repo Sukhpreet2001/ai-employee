@@ -9,6 +9,9 @@ from pydantic import BaseModel
 import pandas as pd
 from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.preprocessing import LabelEncoder
+import os
+import uuid
+from datetime import datetime
 
 
 router = APIRouter()
@@ -111,11 +114,15 @@ async def generate_report(file: UploadFile = File(...)):
     # Create a report generator
     report_generator = ReportGenerator(df)
 
-    # Path where the PDF will be saved
-    output_pdf_path = "generated_report.pdf"
+    # Generate a unique filename for the report
+    if not os.path.exists("generated_reports/"):
+        os.makedirs("generated_reports/")
+    
+    report_id = f"report_{uuid.uuid4()}_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
+    output_pdf_path = f"generated_reports/{report_id}"
 
     # Generate the report
     report_generator.create_report(output_pdf_path)
 
-    # Return the PDF file
-    return FileResponse(output_pdf_path, media_type='application/pdf', filename="report.pdf")
+    # Return the generated report ID and filename
+    return {"message": "Report generated successfully.", "report_id": report_id}
