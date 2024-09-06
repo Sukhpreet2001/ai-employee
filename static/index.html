@@ -47,7 +47,22 @@
             padding: 8px;
             border-radius: 5px;
         }
+        #response {
+            margin-top: 20px;
+            border: 1px solid #ccc;
+            padding: 20px;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        #terminal-container {
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #000;
+            color: #fff;
+        }
     </style>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm/css/xterm.css" />
+    <script src="https://cdn.jsdelivr.net/npm/xterm/lib/xterm.js"></script>
 </head>
 <body>
     <h1>AI Employee Interface</h1>
@@ -57,6 +72,7 @@
         <h2>Data Processing</h2>
         <p>Select a CSV or XLS file to clean and preprocess the data.</p>
         <form id="processingForm">
+            <label for="processFileInput">Select File:</label>
             <input type="file" id="processFileInput" accept=".csv,.xls,.xlsx">
             <button type="button" onclick="processData()">Process Data</button>
         </form>
@@ -67,12 +83,26 @@
         <h2>Data Analysis</h2>
         <p>Choose the type of analysis and upload a CSV or XLS file.</p>
         <form id="analysisForm">
+            <label for="analysisType">Analysis Type:</label>
             <select id="analysisType">
                 <option value="descriptive">Descriptive Statistics</option>
                 <option value="linear_regression">Linear Regression</option>
                 <option value="decision_tree">Decision Tree Regression</option>
             </select>
-            <input type="file" id="analysisFileInput" accept=".csv,.xls,.xlsx">
+            <div class="linear-regression-inputs"></div>
+                <label for="xColumn">X Column:</label>
+                <input type="text" id="xColumn">
+                <label for="yColumn">Y Column:</label>
+                <input type="text" id="yColumn">
+            </div>
+            <div id="decisionTreeInputs"></div>
+                <label for="targetColumn">Target Column:</label>
+                <input type="text" id="targetColumn">
+                <label for="featureColumns">Feature Columns (comma-separated):</label>
+                <input type="text" id="featureColumns">
+            </div>
+            <label for="analysisFileInput">Select File:</label>
+            <input type="file" id="analysisFileInput">
             <button type="button" onclick="analyzeData()">Analyze Data</button>
         </form>
     </div>
@@ -81,13 +111,16 @@
     <div class="module-section">
         <h2>Generate Report</h2>
         <p>Generate a detailed report based on analysis, including visualizations and summaries.</p>
-        <button type="button" onclick="generateReport()">Generate Report</button>
+        <form id="reportForm">
+            <label for="reportFileInput">Select File:</label>
+            <input type="file" id="reportFileInput">
+            <button type="button" onclick="generateReport()">Generate Report</button>
+        </form>
     </div>
 
     <!-- CLI Section -->
     <div class="module-section">
-        <h2>Use Command Line Interface (CLI)</h2>
-        <p>If you're comfortable using the CLI, you can perform tasks directly through the terminal interface.</p>
+        <h2>Command Line Interface (CLI)</h2>
         <button type="button" onclick="toggleCliInstructions()">CLI Instructions</button>
         <div id="cliInstructions">
             <h3>CLI Commands:</h3>
@@ -99,8 +132,25 @@
         </div>
     </div>
 
+    <!-- Terminal Section -->
+    <div class="module-section">
+        <h2>Command Line Interface (CLI)</h2>
+        <div id="terminal-container"></div>
+    </div>
+
+    <!-- Response Section -->
+    <div id="response">
+        <h2>Response</h2>
+        <pre id="responseOutput"></pre>
+    </div>
+
     <script>
-        // Check if a file is selected before processing
+        document.getElementById('analysisType').addEventListener('change', function() {
+            const selectedType = this.value;
+            document.getElementById('linearRegressionInputs').style.display = selectedType === 'linear_regression' ? 'block' : 'none';
+            document.getElementById('decisionTreeInputs').style.display = selectedType === 'decision_tree' ? 'block' : 'none';
+        });
+
         function processData() {
             const fileInput = document.getElementById('processFileInput').files[0];
             if (!fileInput) {
@@ -111,12 +161,12 @@
             const formData = new FormData();
             formData.append('file', fileInput);
 
-            axios.post('http://localhost:8000/data_processing', formData)
+            axios.post('http://localhost:8000/process/', formData)
                 .then(response => {
-                    alert('Data processing completed!');
+                    document.getElementById('responseOutput').textContent = JSON.stringify(response.data, null, 2);
                 })
                 .catch(error => {
-                    alert('Error processing data.');
+                    document.getElementById('responseOutput').textContent = 'Error processing data.';
                     console.error(error);
                 });
         }
@@ -133,33 +183,75 @@
             const formData = new FormData();
             formData.append('file', fileInput);
 
-            axios.post(`http://localhost:8000/analysis?type=${analysisType}`, formData)
-                .then(response => {
-                    alert('Data analysis completed!');
-                })
-                .catch(error => {
-                    alert('Error analyzing data.');
-                    console.error(error);
-                });
+            let url = `http://localhost:8000/${analysisType}/`;
+
+            if (analysisType === 'linear_regression') {
+                const xColumn = document.getElementById('xColumn').value;
+                const yColumn = document.getElementById('yColumn').value;
+                url += `?x=${encodeURIComponent(xColumn)}&y=${encodeURIComponent(yColumn)}`;
+            } else if (analysisType === 'decision_tree') {
+                const targetColumn = document.getElementById('targetColumn').value;
+                const featureColumns = document.getElementById('featureColumns').value.split(',').map(col => col.trim());
+                url += `?target_column=${encodeURIComponent(targetColumn)}&feature_columns=${encodeURIComponent(featureColumns.join(','))}`;
+            }
+
+            axios.post(url, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            })
+            .then(response => {
+                document.getElementById('responseOutput').textContent = JSON.stringify(response.data, null, 2);
+            })
+            .catch(error => {
+                document.getElementById('responseOutput').textContent = 'Error analyzing data.';
+                console.error(error);
+            });
         }
 
         function generateReport() {
-            axios.post('http://localhost:8000/generate_report')
+            const fileInput = document.getElementById('reportFileInput').files[0];
+            if (!fileInput) {
+                alert('Please select a file to generate a report.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', fileInput);
+
+            axios.post('http://localhost:8000/generate_report/', formData)
                 .then(response => {
-                    alert('Report generated successfully!');
+                    document.getElementById('responseOutput').textContent = JSON.stringify(response.data, null, 2);
                 })
                 .catch(error => {
-                    alert('Error generating report.');
+                    document.getElementById('responseOutput').textContent = 'Error generating report.';
                     console.error(error);
                 });
         }
 
-        // Toggle CLI Instructions
         function toggleCliInstructions() {
             const cliInstructions = document.getElementById('cliInstructions');
             cliInstructions.style.display = cliInstructions.style.display === 'none' ? 'block' : 'none';
         }
+
+        const terminalContainer = document.getElementById('terminal-container');
+        const term = new Terminal();
+        term.open(terminalContainer);
+        term.writeln('Welcome to the AI Employee CLI. Type a command and press Enter.');
+
+        term.onData(data => {
+            if (data.charCodeAt(0) === 13) { // Enter key
+                const command = term.buffer.active.getLine(term.buffer.active.cursorY).translateToString().trim();
+                axios.post('http://localhost:8000/cli/', { command })
+                    .then(response => {
+                        term.writeln(response.data.output);
+                    })
+                    .catch(error => {
+                        term.writeln('Error executing command.');
+                        console.error(error);
+                    });
+            }
+        });
     </script>
 </body>
 </html>
-

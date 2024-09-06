@@ -1,5 +1,5 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Query
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Query,Form
+from fastapi.responses import FileResponse,JSONResponse
 from app.utils.file_handler import read_file
 from app.services.data_processing import clean_data, preprocess_data
 from app.services.analysis_engine import AnalysisEngine
@@ -45,7 +45,10 @@ class DecisionTreeRequest(BaseModel):
     feature_columns: str
     max_depth: int = None
 
-@router.post("/descriptive_statistics/")
+class CLICommand(BaseModel):
+    command: str
+
+@router.post("/descriptive/")
 async def get_descriptive_statistics(file: UploadFile = File(...)):
     contents = await file.read()
     file_like_object = io.BytesIO(contents)
@@ -87,7 +90,7 @@ async def linear_regression(
     # Return the slope and intercept
     return {"slope": model.coef_[0], "intercept": model.intercept_}
 
-@router.post("/decision_tree_regression/")
+@router.post("/decision_tree/")
 async def decision_tree_regression(
     file: UploadFile = File(...),
     target_column: str = Query(...),
@@ -126,3 +129,23 @@ async def generate_report(file: UploadFile = File(...)):
 
     # Return the generated report ID and filename
     return {"message": "Report generated successfully.", "report_id": report_id}
+@router.post("/cli/")
+async def execute_command(cli_command: CLICommand):
+    command = cli_command.command.strip()
+    
+    if command == "help":
+        return {"response": "Available commands:\n  upload - Upload files\n  analyze --type [descriptive|linear|tree] - Perform analysis\n  report - Generate report"}
+    
+    # For simplicity, we just simulate command execution
+    # In a real-world scenario, you'd implement actual logic for each command
+    if command.startswith("upload"):
+        # Handle upload command
+        return {"response": "File upload functionality is not implemented yet."}
+    elif command.startswith("analyze"):
+        # Handle analyze command
+        return {"response": "Analysis functionality is not implemented yet."}
+    elif command.startswith("report"):
+        # Handle report command
+        return {"response": "Report generation functionality is not implemented yet."}
+    else:
+        raise HTTPException(status_code=400, detail=f"Command '{command}' not recognized.")
